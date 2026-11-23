@@ -43,7 +43,47 @@ function loadInitialBookings(): BookingRecord[] {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return INITIAL_BOOKINGS;
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : INITIAL_BOOKINGS;
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      return INITIAL_BOOKINGS;
+    }
+    const sanitized = parsed
+      .filter((item): item is Record<string, unknown> => Boolean(item && typeof item === 'object'))
+      .filter((item) => typeof item.id === 'string' && typeof item.serviceTitle === 'string')
+      .map((item): BookingRecord => ({
+        id: String(item.id),
+        confirmationCode: typeof item.confirmationCode === 'string' ? item.confirmationCode : 'PL-4800',
+        status:
+          item.status === 'upcoming' || item.status === 'completed' || item.status === 'cancelled'
+            ? item.status
+            : 'upcoming',
+        serviceId:
+          item.serviceId === 'standard' ||
+          item.serviceId === 'deep' ||
+          item.serviceId === 'move' ||
+          item.serviceId === 'eco'
+            ? item.serviceId
+            : 'standard',
+        serviceTitle: String(item.serviceTitle),
+        bedrooms: typeof item.bedrooms === 'number' ? item.bedrooms : 2,
+        bathrooms: typeof item.bathrooms === 'number' ? item.bathrooms : 1,
+        addonTitles: Array.isArray(item.addonTitles)
+          ? item.addonTitles.filter((t): t is string => typeof t === 'string')
+          : [],
+        frequencyLabel: typeof item.frequencyLabel === 'string' ? item.frequencyLabel : 'One-Time',
+        date: typeof item.date === 'string' ? item.date : '2026-11-26',
+        timeSlot: typeof item.timeSlot === 'string' ? item.timeSlot : '10:30 AM',
+        cleanerId: typeof item.cleanerId === 'string' ? item.cleanerId : 'elena-vance',
+        cleanerName: typeof item.cleanerName === 'string' ? item.cleanerName : 'Elena Vance',
+        cleanerPhoto: typeof item.cleanerPhoto === 'string' ? item.cleanerPhoto : undefined,
+        cleanerInitials: typeof item.cleanerInitials === 'string' ? item.cleanerInitials : 'PL',
+        address: typeof item.address === 'string' ? item.address : '',
+        unit: typeof item.unit === 'string' ? item.unit : '',
+        entryNotes: typeof item.entryNotes === 'string' ? item.entryNotes : '',
+        totalPrice: typeof item.totalPrice === 'number' ? item.totalPrice : 119,
+        estimatedMinutes: typeof item.estimatedMinutes === 'number' ? item.estimatedMinutes : 120,
+        createdAt: typeof item.createdAt === 'string' ? item.createdAt : new Date().toISOString(),
+      }));
+    return sanitized.length > 0 ? sanitized : INITIAL_BOOKINGS;
   } catch {
     return INITIAL_BOOKINGS;
   }
